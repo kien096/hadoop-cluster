@@ -1,0 +1,82 @@
+version: "3.8"
+
+services:
+  namenode:
+    image: apache/hadoop:3
+    container_name: namenode
+    hostname: namenode
+    user: root
+    env_file:
+      - hadoop.env
+    volumes:
+      - ./config/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml
+      - ./config/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml
+      - ./config/mapred-site.xml:/opt/hadoop/etc/hadoop/mapred-site.xml
+      - ./config/yarn-site.xml:/opt/hadoop/etc/hadoop/yarn-site.xml
+      - ./workspace:/workspace
+      - namenode_data:/hadoop/dfs/name
+    ports:
+      - "9870:9870"
+      - "8088:8088"
+      - "19888:19888"
+      - "9000:9000"
+    command: >
+      bash -c "
+        if [ ! -f /hadoop/dfs/name/current/VERSION ]; then
+          hdfs namenode -format -force;
+        fi &&
+        hdfs namenode &
+        yarn resourcemanager &
+        mapred historyserver
+      "
+    networks:
+      - hadoop_net
+
+  datanode1:
+    image: apache/hadoop:3
+    container_name: datanode1
+    hostname: datanode1
+    user: root
+    env_file:
+      - hadoop.env
+    volumes:
+      - ./config/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml
+      - ./config/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml
+      - ./config/mapred-site.xml:/opt/hadoop/etc/hadoop/mapred-site.xml
+      - ./config/yarn-site.xml:/opt/hadoop/etc/hadoop/yarn-site.xml
+      - datanode1_data:/hadoop/dfs/data
+    depends_on:
+      - namenode
+    command: >
+      bash -c "hdfs datanode & yarn nodemanager"
+    networks:
+      - hadoop_net
+
+  datanode2:
+    image: apache/hadoop:3
+    container_name: datanode2
+    hostname: datanode2
+    user: root
+    env_file:
+      - hadoop.env
+    volumes:
+      - ./config/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml
+      - ./config/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml
+      - ./config/mapred-site.xml:/opt/hadoop/etc/hadoop/mapred-site.xml
+      - ./config/yarn-site.xml:/opt/hadoop/etc/hadoop/yarn-site.xml
+      - datanode2_data:/hadoop/dfs/data
+    depends_on:
+      - namenode
+    command: >
+      bash -c "hdfs datanode & yarn nodemanager"
+    networks:
+      - hadoop_net
+
+volumes:
+  namenode_data:
+  datanode1_data:
+  datanode2_data:
+
+networks:
+  hadoop_net:
+    driver: bridge
